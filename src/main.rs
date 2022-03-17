@@ -1,32 +1,46 @@
-pub trait Expr {
-   fn eval(&self) -> f64;
-   fn to_string(&self) -> String;
+use std::ops::Add;
+use std::string::ToString;
+
+pub trait Eval<T> {
+   fn eval(&self) -> T;
 }
 
-struct Constant {
-    num: f64
+struct Constant<T> {
+    num: T
 }
 
-impl Expr for Constant {
-    fn eval(&self) -> f64 {
-        self.num
+impl<T> Eval<T> for Constant<T> where T: Clone {
+    fn eval(&self) -> T {
+        self.num.clone()
     }
+}
 
+impl<T> ToString for Constant<T> where T: ToString {
     fn to_string(&self) -> String {
         self.num.to_string()
     }
 }
 
-struct BinaryPlus<'a, T> where T: Expr + ?Sized {
+impl<T> Add for Constant<T> where T: Add<Output = T>{
+    type Output = T;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        self.num + rhs.num
+    }
+}
+
+struct BinaryPlus<'a, T> where T: 'a {
     lhs: &'a T,
     rhs: &'a T,
 }
 
-impl<T> Expr for BinaryPlus<'_, T> where T: Expr {
-    fn eval(&self) -> f64 {
+impl<'a, T, U> Eval<T> for BinaryPlus<'a, U> where T: Add<Output = T>, U: Eval<T> {
+    fn eval(&self) -> T {
         self.lhs.eval() + self.rhs.eval()
     }
+}
 
+impl<T> ToString for BinaryPlus<'_, T> where T: ToString {
     fn to_string(&self) -> String {
         self.lhs.to_string() + " + " + &*self.rhs.to_string()
     }
@@ -39,15 +53,3 @@ fn main() {
     let bp = BinaryPlus { lhs: &x, rhs: &y };
     println!("Hello, world! {} = {}", bp.to_string(), bp.eval());
 }
-
-//fn main() {
-//    
-//    let mut foos = Vec::new();
-//    foos.push(Foo {bars: vec![Bar::TWO, Bar::THREE]});
-//    foos.push(Foo { bars: vec![] });
-//
-//    let mut foos2 = Vec::new();
-//    for x in &foos {
-//        foos2.push(x.clone());
-//    }
-//}
